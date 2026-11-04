@@ -46,6 +46,36 @@ export class ApiController {
     private readonly prisma: PrismaService,
   ) {}
 
+  // ==================== HEALTH ====================
+  @Get('health')
+  async health() {
+    const hasDbUrl = Boolean(process.env.DATABASE_URL);
+    const hasDirectUrl = Boolean(process.env.DIRECT_URL);
+    let dbStatus = 'disconnected';
+    let dbError: string | null = null;
+    let userCount = 0;
+    try {
+      userCount = await this.prisma.user.count();
+      dbStatus = 'connected';
+    } catch (e: any) {
+      dbError = e?.message || String(e);
+    }
+    return {
+      status: 'ok',
+      service: 'trengdien',
+      timestamp: new Date().toISOString(),
+      env: {
+        hasDbUrl,
+        hasDirectUrl,
+      },
+      database: {
+        status: dbStatus,
+        userCount,
+        error: dbError,
+      },
+    };
+  }
+
   // ==================== AUTH ====================
   @Post('auth/login')
   async login(@Body() body: { username?: string; password?: string }) {
