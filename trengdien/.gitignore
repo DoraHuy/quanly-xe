@@ -1,0 +1,17 @@
+# dependencies
+/node_modules
+
+# agent skills
+.agents/
+.agent/
+skills-lock.json
+
+# environment variables
+.env*
+!.env.example
+
+# build output
+/dist
+
+
+/src/generated/prisma
