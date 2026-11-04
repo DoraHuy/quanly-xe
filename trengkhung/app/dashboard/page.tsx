@@ -708,7 +708,13 @@ export default function DashboardPage() {
                   <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-4 py-3 font-mono font-bold text-slate-900">{r.code}</td>
                     <td className="px-4 py-3 font-medium text-slate-800">{r.customerName}</td>
-                    <td className="px-4 py-3 text-slate-600">{r.assets || '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {Array.isArray(r.assets)
+                        ? r.assets.map((a: any) => a?.name || a?.qrCode).filter(Boolean).join(', ') || '—'
+                        : typeof r.assets === 'string'
+                        ? r.assets
+                        : '—'}
+                    </td>
                     <td className="px-4 py-3 text-xs text-slate-500">
                       {formatDateTimeVN(r.expectedReturnAt)}
                     </td>
