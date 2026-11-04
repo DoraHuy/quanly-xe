@@ -6,22 +6,25 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AppShell } from '@/components/layout/app-shell';
 import { apiClient, swrFetcher } from '@/core/infrastructure/api-client';
 import { formatDateTimeVN } from '@/core/domain/types';
-import { UserCog, Plus, ShieldCheck, UserCheck, Loader2, X } from 'lucide-react';
+import { UserCog, Plus, ShieldCheck, UserCheck, Loader2, X, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 
 interface StaffItem {
   id: string;
   username: string;
+  email: string;
   name: string;
   phone: string | null;
   role: string;
-  is_active: boolean;
+  active?: boolean;
+  is_active?: boolean;
   created_at: string;
 }
 
 export default function StaffPage() {
-  const { data: staffList, mutate, isLoading } = useSWR<StaffItem[]>('/staff', swrFetcher);
+  const { data: staffList, mutate, isLoading } = useSWR<StaffItem[]>('/api/staff', swrFetcher);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [form, setForm] = useState({
     username: '',
     name: '',
@@ -32,9 +35,10 @@ export default function StaffPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setModalError(null);
     setSubmitting(true);
     try {
-      await apiClient.post('/staff', {
+      await apiClient.post('/api/staff', {
         username: form.username.trim(),
         name: form.name.trim(),
         phone: form.phone.trim() || undefined,
@@ -45,9 +49,31 @@ export default function StaffPage() {
       setShowModal(false);
       setForm({ username: '', name: '', phone: '', role: 'staff', password: '' });
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Lỗi tạo tài khoản nhân viên');
+      setModalError(err?.message || 'Lỗi tạo tài khoản nhân viên');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleToggle = async (item: StaffItem) => {
+    const currentActive = item.active ?? item.is_active ?? true;
+    try {
+      await apiClient.patch(`/api/staff/${item.id}`, {
+        active: !currentActive,
+      });
+      await mutate();
+    } catch (err: any) {
+      alert(err?.message || 'Lỗi cập nhật trạng thái nhân viên');
+    }
+  };
+
+  const handleDelete = async (item: StaffItem) => {
+    if (!confirm(`Bạn có chắc muốn xóa hoặc vô hiệu hóa nhân viên "${item.name}"?`)) return;
+    try {
+      await apiClient.delete(`/api/staff/${item.id}`);
+      await mutate();
+    } catch (err: any) {
+      alert(err?.message || 'Không thể xóa nhân viên');
     }
   };
 
@@ -67,7 +93,10 @@ export default function StaffPage() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setModalError(null);
+              setShowModal(true);
+            }}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-sm transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -91,36 +120,70 @@ export default function StaffPage() {
                     <th className="px-5 py-3.5">Vai trò</th>
                     <th className="px-5 py-3.5">Ngày tạo</th>
                     <th className="px-5 py-3.5">Trạng thái</th>
+                    <th className="px-5 py-3.5 text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {staffList?.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-5 py-3.5 font-mono font-bold text-slate-900">{s.username}</td>
-                      <td className="px-5 py-3.5 font-semibold text-slate-800">{s.name}</td>
-                      <td className="px-5 py-3.5 text-slate-600">{s.phone || '—'}</td>
-                      <td className="px-5 py-3.5">
-                        {s.role === 'manager' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
-                            <ShieldCheck className="w-3.5 h-3.5" /> Quản lý (Manager)
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-100 text-sky-700">
-                            <UserCheck className="w-3.5 h-3.5" /> Nhân viên (Staff)
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-500">{formatDateTimeVN(s.created_at)}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                          Đang hoạt động
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {staffList?.map((s) => {
+                    const isActive = s.active ?? s.is_active ?? true;
+                    return (
+                      <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-5 py-3.5 font-mono font-bold text-slate-900">{s.username}</td>
+                        <td className="px-5 py-3.5 font-semibold text-slate-800">{s.name}</td>
+                        <td className="px-5 py-3.5 text-slate-600">{s.phone || '—'}</td>
+                        <td className="px-5 py-3.5">
+                          {s.role === 'admin' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                              <ShieldCheck className="w-3.5 h-3.5" /> Quản trị tối cao (Admin)
+                            </span>
+                          ) : s.role === 'manager' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                              <ShieldCheck className="w-3.5 h-3.5" /> Quản lý (Manager)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-100 text-sky-700">
+                              <UserCheck className="w-3.5 h-3.5" /> Nhân viên (Staff)
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5 text-slate-500">{formatDateTimeVN(s.created_at)}</td>
+                        <td className="px-5 py-3.5">
+                          <button
+                            onClick={() => handleToggle(s)}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition-colors ${
+                              isActive
+                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                            title="Bấm để bật/tắt trạng thái"
+                          >
+                            {isActive ? (
+                              <>
+                                <ToggleRight className="w-3.5 h-3.5" /> Đang hoạt động
+                              </>
+                            ) : (
+                              <>
+                                <ToggleLeft className="w-3.5 h-3.5" /> Tạm khóa
+                              </>
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handleDelete(s)}
+                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition cursor-pointer"
+                            title="Xóa nhân viên"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </motion.button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {staffList?.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
+                      <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
                         Chưa có nhân viên nào
                       </td>
                     </tr>
@@ -150,6 +213,13 @@ export default function StaffPage() {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
+
+                {modalError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-600 font-medium">
+                    {modalError}
+                  </div>
+                )}
+
                 <form onSubmit={handleCreate} className="space-y-3.5">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -192,7 +262,7 @@ export default function StaffPage() {
                     <select
                       value={form.role}
                       onChange={(e) => setForm({ ...form, role: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500 bg-white"
                     >
                       <option value="staff">Nhân viên vận hành (Staff)</option>
                       <option value="manager">Quản trị viên (Manager)</option>
@@ -215,7 +285,7 @@ export default function StaffPage() {
                     <button
                       type="button"
                       onClick={() => setShowModal(false)}
-                      className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 cursor-pointer"
+                      className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 cursor-pointer"
                     >
                       Hủy
                     </button>
@@ -224,7 +294,7 @@ export default function StaffPage() {
                       whileTap={{ scale: 0.98 }}
                       type="submit"
                       disabled={submitting}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
                     >
                       {submitting ? 'Đang tạo...' : 'Tạo tài khoản'}
                     </motion.button>

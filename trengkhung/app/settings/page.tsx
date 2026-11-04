@@ -28,11 +28,11 @@ export default function SettingsPage() {
     e.preventDefault();
     setProfileMsg('');
     try {
-      await apiClient.patch('/auth/profile', { name: name.trim(), phone: phone.trim() || undefined });
+      await apiClient.patch('/api/auth/profile', { name: name.trim(), phone: phone.trim() || undefined });
       await hydrate();
       setProfileMsg('Đã lưu thông tin cá nhân thành công!');
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Lỗi cập nhật hồ sơ');
+      alert(err?.message || 'Lỗi cập nhật hồ sơ');
     }
   };
 
@@ -40,7 +40,7 @@ export default function SettingsPage() {
     e.preventDefault();
     setPwdMsg('');
     try {
-      await apiClient.post('/auth/change-password', {
+      await apiClient.post('/api/auth/change-password', {
         current_password: currentPassword,
         new_password: newPassword,
       });

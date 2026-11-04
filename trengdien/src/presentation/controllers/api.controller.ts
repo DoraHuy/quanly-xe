@@ -526,7 +526,7 @@ export class ApiController {
     @Body()
     body: {
       username: string;
-      email: string;
+      email?: string;
       password?: string;
       name: string;
       phone?: string;
@@ -534,6 +534,27 @@ export class ApiController {
     },
   ) {
     const data = await this.opsService.createStaff(body);
+    return { success: true, data };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('staff/:id')
+  async toggleStaff(
+    @Req() req: { user: { userId: string } },
+    @Param('id') id: string,
+    @Body() body: { active: boolean },
+  ) {
+    const data = await this.opsService.toggleStaff(id, body.active, req.user.userId);
+    return { success: true, data };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('staff/:id')
+  async deleteStaff(
+    @Req() req: { user: { userId: string } },
+    @Param('id') id: string,
+  ) {
+    const data = await this.opsService.deleteStaff(id, req.user.userId);
     return { success: true, data };
   }
 }

@@ -458,6 +458,12 @@ export class OperationsApplicationService {
     },
   ) {
     return this.prisma.$transaction(async (tx) => {
+      let validCreatorId: string | null = null;
+      if (creatorId) {
+        const u = await tx.user.findUnique({ where: { id: creatorId }, select: { id: true } });
+        if (u) validCreatorId = u.id;
+      }
+
       const latest = await tx.pricingVersion.findFirst({ orderBy: { versionNumber: 'desc' } });
       const nextVersion = (latest?.versionNumber || 0) + 1;
 
@@ -478,7 +484,7 @@ export class OperationsApplicationService {
           lateFeeHourlyMaxHours: Number(dto.late_fee_hourly_max_hours) || 8,
           note: dto.note || `Cập nhật bảng giá v${nextVersion}`,
           isActive: true,
-          creatorId: creatorId || null,
+          creatorId: validCreatorId,
           tiers: {
             create: (dto.tiers || []).map((t) => ({
               minDays: Number(t.min_days),
@@ -521,7 +527,7 @@ export class OperationsApplicationService {
 
   async createDiscountCode(dto: {
     code: string;
-    name: string;
+    name?: string;
     description?: string;
     scope?: string;
     value_type?: string;
@@ -529,19 +535,70 @@ export class OperationsApplicationService {
     percent_basis_points?: number;
     start_date?: string;
     end_date?: string;
+    discount_type?: string;
+    discount_value?: number;
+    min_days?: number;
+    max_uses?: number;
   }) {
     if (!dto.code?.trim()) throw new BadRequestException('Vui lòng nhập mã giảm giá');
     const codeNorm = dto.code.trim().toUpperCase();
+
+    // Map frontend or legacy parameters seamlessly
+    let scope = dto.scope || 'order';
+    let valueType = dto.value_type || 'fixed';
+    let fixedAmount = dto.fixed_amount ? Number(dto.fixed_amount) : null;
+    let percentBasisPoints = dto.percent_basis_points ? Number(dto.percent_basis_points) : null;
+
+    if (dto.discount_type) {
+      if (dto.discount_type === 'percentage') {
+        valueType = 'percent';
+        percentBasisPoints = Math.round((Number(dto.discount_value) || 0) * 100);
+        fixedAmount = null;
+      } else if (dto.discount_type === 'fixed_Per_Day') {
+        scope = 'asset_daily';
+        valueType = 'fixed';
+        fixedAmount = Number(dto.discount_value) || 0;
+        percentBasisPoints = null;
+      } else if (dto.discount_type === 'fixed') {
+        scope = 'order';
+        valueType = 'fixed';
+        fixedAmount = Number(dto.discount_value) || 0;
+        percentBasisPoints = null;
+      }
+    }
+
+    const existing = await this.prisma.discountCode.findFirst({
+      where: { codeNormalized: codeNorm },
+    });
+    if (existing) {
+      if (existing.deleted) {
+        return this.prisma.discountCode.update({
+          where: { id: existing.id },
+          data: {
+            deleted: false,
+            active: true,
+            name: dto.name || codeNorm,
+            description: dto.description || null,
+            scope,
+            valueType,
+            fixedAmount,
+            percentBasisPoints,
+          },
+        });
+      }
+      throw new BadRequestException(`Mã giảm giá "${codeNorm}" đã tồn tại`);
+    }
+
     return this.prisma.discountCode.create({
       data: {
         code: codeNorm,
         codeNormalized: codeNorm,
         name: dto.name || codeNorm,
         description: dto.description || null,
-        scope: dto.scope || 'order',
-        valueType: dto.value_type || 'fixed',
-        fixedAmount: dto.fixed_amount ? Number(dto.fixed_amount) : null,
-        percentBasisPoints: dto.percent_basis_points ? Number(dto.percent_basis_points) : null,
+        scope,
+        valueType,
+        fixedAmount,
+        percentBasisPoints,
         startDate: dto.start_date ? new Date(dto.start_date) : new Date(),
         endDate: dto.end_date ? new Date(dto.end_date) : null,
         active: true,
@@ -576,13 +633,14 @@ export class OperationsApplicationService {
       phone: u.phone,
       role: u.role,
       active: u.active,
+      is_active: u.active,
       created_at: u.createdAt,
     }));
   }
 
   async createStaff(dto: {
     username: string;
-    email: string;
+    email?: string;
     password?: string;
     name: string;
     phone?: string;
@@ -591,10 +649,23 @@ export class OperationsApplicationService {
     if (!dto.username?.trim() || !dto.name?.trim()) {
       throw new BadRequestException('Vui lòng nhập đầy đủ username và họ tên nhân viên');
     }
+    const username = dto.username.trim().toLowerCase();
+    const existing = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { username },
+          { email: dto.email?.trim() || `${username}@rental.com` },
+        ],
+      },
+    });
+    if (existing) {
+      throw new BadRequestException('Tên đăng nhập hoặc email này đã tồn tại trong hệ thống');
+    }
+
     return this.prisma.user.create({
       data: {
-        username: dto.username.trim(),
-        email: dto.email?.trim() || `${dto.username.trim()}@rental.com`,
+        username,
+        email: dto.email?.trim() || `${username}@rental.com`,
         passwordHash: PasswordHelper.hash(dto.password || '12345678'),
         name: dto.name.trim(),
         phone: dto.phone || null,
@@ -602,6 +673,51 @@ export class OperationsApplicationService {
         active: true,
       },
     });
+  }
+
+  async toggleStaff(id: string, active: boolean, currentUserId?: string) {
+    if (id === currentUserId) {
+      throw new BadRequestException('Bạn không thể tự khóa tài khoản của chính mình');
+    }
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Không tìm thấy tài khoản nhân viên');
+    return this.prisma.user.update({
+      where: { id },
+      data: { active },
+    });
+  }
+
+  async deleteStaff(id: string, currentUserId?: string) {
+    if (id === currentUserId) {
+      throw new BadRequestException('Bạn không thể tự xóa tài khoản của chính mình');
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            createdRentals: true,
+            createdPricing: true,
+            performedSwaps: true,
+            returnSessions: true,
+          },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('Không tìm thấy tài khoản nhân viên');
+    const hasHistory =
+      user._count.createdRentals +
+        user._count.createdPricing +
+        user._count.performedSwaps +
+        user._count.returnSessions >
+      0;
+    if (hasHistory) {
+      return this.prisma.user.update({
+        where: { id },
+        data: { active: false },
+      });
+    }
+    return this.prisma.user.delete({ where: { id } });
   }
 }
 

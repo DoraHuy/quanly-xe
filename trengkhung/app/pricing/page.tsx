@@ -9,11 +9,12 @@ import { formatVND, formatDateTimeVN, PricingConfig } from '@/core/domain/types'
 import { Tag, Plus, CheckCircle2, Clock, AlertTriangle, Loader2, Sparkles, X } from 'lucide-react';
 
 export default function PricingPage() {
-  const { data: activePricing, mutate: mutateActive } = useSWR<PricingConfig>('/pricing/active', swrFetcher);
-  const { data: versions, mutate: mutateVersions } = useSWR<PricingConfig[]>('/pricing/versions', swrFetcher);
+  const { data: activePricing, mutate: mutateActive } = useSWR<PricingConfig>('/api/pricing/active', swrFetcher);
+  const { data: versions, mutate: mutateVersions } = useSWR<PricingConfig[]>('/api/pricing/versions', swrFetcher);
 
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [form, setForm] = useState({
     default_price_per_day: 0,
     tier_4d: 0,
@@ -28,6 +29,7 @@ export default function PricingPage() {
   });
 
   const openCreateModal = () => {
+    setModalError(null);
     if (activePricing) {
       const tierMap: Record<number, number> = {};
       (activePricing.tiers || activePricing.price_tiers || []).forEach((t) => {
@@ -51,9 +53,10 @@ export default function PricingPage() {
 
   const handleCreateVersion = async (e: React.FormEvent) => {
     e.preventDefault();
+    setModalError(null);
     setSubmitting(true);
     try {
-      await apiClient.post('/pricing/versions', {
+      await apiClient.post('/api/pricing/versions', {
         default_price_per_day: Number(form.default_price_per_day),
         tiers: [
           { min_days: 4, price_per_day: Number(form.tier_4d) },
@@ -62,7 +65,7 @@ export default function PricingPage() {
         ],
         month_days: 30,
         price_per_month: Number(form.month_30d),
-        price_per_extra_day: Number(form.extra_day),
+        price_per_extra_day: Number(form.extra_day) || Math.round(Number(form.month_30d) / 30),
         late_fee_grace_hours: Number(form.late_fee_grace_hours),
         late_fee_hourly_amount: Number(form.late_fee_hourly_amount),
         late_fee_hourly_max_hours: Number(form.late_fee_hourly_max_hours),
@@ -71,7 +74,7 @@ export default function PricingPage() {
       await Promise.all([mutateActive(), mutateVersions()]);
       setShowModal(false);
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Lỗi tạo phiên bản giá mới');
+      setModalError(err?.message || 'Lỗi tạo phiên bản giá mới');
     } finally {
       setSubmitting(false);
     }
@@ -296,83 +299,100 @@ export default function PricingPage() {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
+                {modalError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-600 font-medium">
+                    {modalError}
+                  </div>
+                )}
                 <form onSubmit={handleCreateVersion} className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Giá 1-3 ngày (VNĐ/ngày)
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Giá 1-3 ngày (VNĐ/ngày) <span className="text-rose-500 font-bold">*</span>
                       </label>
                       <input
                         type="number"
+                        min={10000}
+                        step={10000}
                         value={form.default_price_per_day || ''}
                         onChange={(e) => setForm({ ...form, default_price_per_day: Number(e.target.value) })}
                         placeholder="VD: 150000"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500 font-semibold"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Từ 4 ngày (VNĐ/ngày)
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Từ 4 ngày (VNĐ/ngày) <span className="text-rose-500 font-bold">*</span>
                       </label>
                       <input
                         type="number"
+                        min={10000}
+                        step={10000}
                         value={form.tier_4d || ''}
                         onChange={(e) => setForm({ ...form, tier_4d: Number(e.target.value) })}
                         placeholder="VD: 130000"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500 font-semibold"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Từ 7 ngày (VNĐ/ngày)
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Từ 7 ngày (VNĐ/ngày) <span className="text-rose-500 font-bold">*</span>
                       </label>
                       <input
                         type="number"
+                        min={10000}
+                        step={10000}
                         value={form.tier_7d || ''}
                         onChange={(e) => setForm({ ...form, tier_7d: Number(e.target.value) })}
                         placeholder="VD: 110000"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500 font-semibold"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Từ 15 ngày (VNĐ/ngày)
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Từ 15 ngày (VNĐ/ngày) <span className="text-rose-500 font-bold">*</span>
                       </label>
                       <input
                         type="number"
+                        min={10000}
+                        step={10000}
                         value={form.tier_15d || ''}
                         onChange={(e) => setForm({ ...form, tier_15d: Number(e.target.value) })}
                         placeholder="VD: 70000"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500 font-semibold"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Trọn gói 30 ngày (VNĐ)
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Trọn gói 30 ngày (VNĐ) <span className="text-rose-500 font-bold">*</span>
                       </label>
                       <input
                         type="number"
+                        min={100000}
+                        step={50000}
                         value={form.month_30d || ''}
                         onChange={(e) => setForm({ ...form, month_30d: Number(e.target.value) })}
                         placeholder="VD: 2100000"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500 font-semibold"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Phụ phí trễ mỗi giờ (VNĐ)
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Phụ phí trễ mỗi giờ (VNĐ) <span className="text-rose-500 font-bold">*</span>
                       </label>
                       <input
                         type="number"
+                        min={0}
+                        step={5000}
                         value={form.late_fee_hourly_amount || ''}
                         onChange={(e) => setForm({ ...form, late_fee_hourly_amount: Number(e.target.value) })}
                         placeholder="VD: 20000"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500 font-semibold"
                         required
                       />
                     </div>
@@ -381,7 +401,7 @@ export default function PricingPage() {
                     <label className="block text-xs font-semibold text-slate-600 mb-1">Ghi chú phiên bản</label>
                     <input
                       type="text"
-                      placeholder="Mô tả phiên bản giá"
+                      placeholder="Mô tả phiên bản giá (VD: Điều chỉnh giá mùa cao điểm hè 2026)"
                       value={form.notes}
                       onChange={(e) => setForm({ ...form, notes: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
