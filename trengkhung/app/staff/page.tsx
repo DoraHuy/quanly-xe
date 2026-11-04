@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import useSWR from 'swr';
+import { motion, AnimatePresence } from 'motion/react';
 import { AppShell } from '@/components/layout/app-shell';
 import { apiClient, swrFetcher } from '@/core/infrastructure/api-client';
-import { formatDateTime } from '@/core/domain/types';
-import { UserCog, Plus, ShieldCheck, UserCheck, Loader2 } from 'lucide-react';
+import { formatDateTimeVN } from '@/core/domain/types';
+import { UserCog, Plus, ShieldCheck, UserCheck, Loader2, X } from 'lucide-react';
 
 interface StaffItem {
   id: string;
@@ -33,7 +34,13 @@ export default function StaffPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await apiClient.post('/staff', form);
+      await apiClient.post('/staff', {
+        username: form.username.trim(),
+        name: form.name.trim(),
+        phone: form.phone.trim() || undefined,
+        role: form.role,
+        password: form.password,
+      });
       await mutate();
       setShowModal(false);
       setForm({ username: '', name: '', phone: '', role: 'staff', password: '' });
@@ -57,13 +64,15 @@ export default function StaffPage() {
               Danh sách quản trị viên (Manager) và nhân viên vận hành cửa hàng (Staff)
             </p>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setShowModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-sm transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Thêm nhân viên
-          </button>
+          </motion.button>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -86,7 +95,7 @@ export default function StaffPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {staffList?.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50/80">
+                    <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="px-5 py-3.5 font-mono font-bold text-slate-900">{s.username}</td>
                       <td className="px-5 py-3.5 font-semibold text-slate-800">{s.name}</td>
                       <td className="px-5 py-3.5 text-slate-600">{s.phone || '—'}</td>
@@ -101,7 +110,7 @@ export default function StaffPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-5 py-3.5 text-slate-500">{formatDateTime(s.created_at)}</td>
+                      <td className="px-5 py-3.5 text-slate-500">{formatDateTimeVN(s.created_at)}</td>
                       <td className="px-5 py-3.5">
                         <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
                           Đang hoạt động
@@ -109,93 +118,117 @@ export default function StaffPage() {
                       </td>
                     </tr>
                   ))}
+                  {staffList?.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
+                        Chưa có nhân viên nào
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           )}
         </div>
 
-        {showModal && (
-          <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
-              <h3 className="text-lg font-bold text-slate-900">Tạo tài khoản nhân viên</h3>
-              <form onSubmit={handleCreate} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Tên đăng nhập</label>
-                  <input
-                    type="text"
-                    required
-                    value={form.username}
-                    onChange={(e) => setForm({ ...form, username: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                    placeholder="VD: staff02"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Họ và tên</label>
-                  <input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                    placeholder="Nguyễn Văn B"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Số điện thoại</label>
-                  <input
-                    type="text"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                    placeholder="0909xxxxxx"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Vai trò</label>
-                  <select
-                    value={form.role}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                  >
-                    <option value="staff">Nhân viên vận hành (Staff)</option>
-                    <option value="manager">Quản trị viên (Manager)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu khởi tạo</label>
-                  <input
-                    type="password"
-                    required
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                    placeholder="Tối thiểu 6 ký tự"
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
+        <AnimatePresence>
+          {showModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-slate-900">Tạo tài khoản nhân viên</h3>
                   <button
-                    type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600"
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
-                  >
-                    {submitting ? 'Đang tạo...' : 'Tạo tài khoản'}
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
-              </form>
+                <form onSubmit={handleCreate} className="space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Tên đăng nhập</label>
+                    <input
+                      type="text"
+                      required
+                      value={form.username}
+                      onChange={(e) => setForm({ ...form, username: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                      placeholder="VD: staff02"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Họ và tên</label>
+                    <input
+                      type="text"
+                      required
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                      placeholder="Nguyễn Văn B"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Số điện thoại</label>
+                    <input
+                      type="text"
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                      placeholder="0909xxxxxx"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Vai trò</label>
+                    <select
+                      value={form.role}
+                      onChange={(e) => setForm({ ...form, role: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="staff">Nhân viên vận hành (Staff)</option>
+                      <option value="manager">Quản trị viên (Manager)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu khởi tạo</label>
+                    <input
+                      type="password"
+                      required
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                      placeholder="Tối thiểu 6 ký tự"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      type="submit"
+                      disabled={submitting}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 cursor-pointer"
+                    >
+                      {submitting ? 'Đang tạo...' : 'Tạo tài khoản'}
+                    </motion.button>
+                  </div>
+                </form>
+              </motion.div>
             </div>
-          </div>
-        )}
+          )}
+        </AnimatePresence>
       </div>
     </AppShell>
   );
 }
-

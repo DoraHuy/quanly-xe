@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { AppShell } from '@/components/layout/app-shell';
 import { useAuthStore } from '@/core/application/auth-store';
 import { apiClient } from '@/core/infrastructure/api-client';
@@ -27,7 +28,7 @@ export default function SettingsPage() {
     e.preventDefault();
     setProfileMsg('');
     try {
-      await apiClient.patch('/auth/profile', { name, phone });
+      await apiClient.patch('/auth/profile', { name: name.trim(), phone: phone.trim() || undefined });
       await hydrate();
       setProfileMsg('Đã lưu thông tin cá nhân thành công!');
     } catch (err: any) {
@@ -76,7 +77,7 @@ export default function SettingsPage() {
                 <input
                   type="text"
                   disabled
-                  value={user?.username || 'admin'}
+                  value={user?.username || ''}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 text-sm font-mono"
                 />
               </div>
@@ -95,7 +96,7 @@ export default function SettingsPage() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
                   required
                 />
               </div>
@@ -105,21 +106,23 @@ export default function SettingsPage() {
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
             {profileMsg && (
               <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" /> {profileMsg}
+                <CheckCircle2 className="h-4 w-4" /> {profileMsg}
               </p>
             )}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               type="submit"
               className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition cursor-pointer"
             >
               Lưu hồ sơ
-            </button>
+            </motion.button>
           </form>
         </div>
 
@@ -137,7 +140,7 @@ export default function SettingsPage() {
                   required
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
                 />
               </div>
               <div>
@@ -147,25 +150,26 @@ export default function SettingsPage() {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
             {pwdMsg && (
               <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" /> {pwdMsg}
+                <CheckCircle2 className="h-4 w-4" /> {pwdMsg}
               </p>
             )}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               type="submit"
               className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition cursor-pointer"
             >
               Cập nhật mật khẩu
-            </button>
+            </motion.button>
           </form>
         </div>
       </div>
     </AppShell>
   );
 }
-

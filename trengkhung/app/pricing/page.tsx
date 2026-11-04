@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import useSWR from 'swr';
+import { motion, AnimatePresence } from 'motion/react';
 import { AppShell } from '@/components/layout/app-shell';
 import { apiClient, swrFetcher } from '@/core/infrastructure/api-client';
 import { formatVND, formatDateTimeVN, PricingConfig } from '@/core/domain/types';
-import { Tag, Plus, CheckCircle2, Clock, AlertTriangle, Loader2, Sparkles } from 'lucide-react';
+import { Tag, Plus, CheckCircle2, Clock, AlertTriangle, Loader2, Sparkles, X } from 'lucide-react';
 
 export default function PricingPage() {
   const { data: activePricing, mutate: mutateActive } = useSWR<PricingConfig>('/pricing/active', swrFetcher);
@@ -14,17 +15,39 @@ export default function PricingPage() {
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
-    default_price_per_day: 150000,
-    tier_4d: 130000,
-    tier_7d: 110000,
-    tier_15d: 70000,
-    month_30d: 2100000,
-    extra_day: 70000,
+    default_price_per_day: 0,
+    tier_4d: 0,
+    tier_7d: 0,
+    tier_15d: 0,
+    month_30d: 0,
+    extra_day: 0,
     late_fee_grace_hours: 1,
-    late_fee_hourly_amount: 20000,
+    late_fee_hourly_amount: 0,
     late_fee_hourly_max_hours: 8,
-    notes: 'Cập nhật cấu hình bảng giá thuê xe điện',
+    notes: '',
   });
+
+  const openCreateModal = () => {
+    if (activePricing) {
+      const tierMap: Record<number, number> = {};
+      (activePricing.tiers || activePricing.price_tiers || []).forEach((t) => {
+        tierMap[t.min_days] = t.price_per_day;
+      });
+      setForm({
+        default_price_per_day: activePricing.default_price_per_day || 0,
+        tier_4d: tierMap[4] || 0,
+        tier_7d: tierMap[7] || 0,
+        tier_15d: tierMap[15] || 0,
+        month_30d: activePricing.price_per_month ?? activePricing.month_package_price ?? 0,
+        extra_day: activePricing.price_per_extra_day ?? activePricing.extra_day_price ?? 0,
+        late_fee_grace_hours: activePricing.late_fee_grace_hours ?? 1,
+        late_fee_hourly_amount: activePricing.late_fee_hourly_amount ?? 0,
+        late_fee_hourly_max_hours: activePricing.late_fee_hourly_max_hours ?? 8,
+        notes: '',
+      });
+    }
+    setShowModal(true);
+  };
 
   const handleCreateVersion = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,8 +80,8 @@ export default function PricingPage() {
   const activeTiers = activePricing?.tiers || activePricing?.price_tiers || [];
   const activeVersionNum = activePricing?.version_number ?? activePricing?.version ?? 1;
   const activeMonthDays = activePricing?.month_days ?? activePricing?.month_package_min_days ?? 30;
-  const activeMonthPrice = activePricing?.price_per_month ?? activePricing?.month_package_price ?? 2100000;
-  const activeExtraDay = activePricing?.price_per_extra_day ?? activePricing?.extra_day_price ?? 70000;
+  const activeMonthPrice = activePricing?.price_per_month ?? activePricing?.month_package_price ?? 0;
+  const activeExtraDay = activePricing?.price_per_extra_day ?? activePricing?.extra_day_price ?? 0;
 
   return (
     <AppShell>
@@ -74,18 +97,24 @@ export default function PricingPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => setShowModal(true)}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={openCreateModal}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-sm transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Tạo phiên bản giá mới
-          </button>
+          </motion.button>
         </div>
 
         {/* Active Pricing Highlight */}
         {activePricing ? (
-          <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl border border-emerald-200 shadow-sm overflow-hidden"
+          >
             <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 text-white flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <Sparkles className="w-5 h-5" />
@@ -189,7 +218,7 @@ export default function PricingPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
             <Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-600" />
@@ -215,7 +244,7 @@ export default function PricingPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {versions?.map((v) => (
-                  <tr key={v.id} className="hover:bg-slate-50/80">
+                  <tr key={v.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-5 py-3.5 font-bold text-slate-900">
                       v{v.version_number ?? v.version}
                     </td>
@@ -248,114 +277,139 @@ export default function PricingPage() {
         </div>
 
         {/* Create Modal */}
-        {showModal && (
-          <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-bold text-slate-900">Tạo phiên bản bảng giá mới</h3>
-              <form onSubmit={handleCreateVersion} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Giá 1-3 ngày (VNĐ/ngày)
-                    </label>
-                    <input
-                      type="number"
-                      value={form.default_price_per_day}
-                      onChange={(e) => setForm({ ...form, default_price_per_day: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Từ 4 ngày (VNĐ/ngày)
-                    </label>
-                    <input
-                      type="number"
-                      value={form.tier_4d}
-                      onChange={(e) => setForm({ ...form, tier_4d: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Từ 7 ngày (VNĐ/ngày)
-                    </label>
-                    <input
-                      type="number"
-                      value={form.tier_7d}
-                      onChange={(e) => setForm({ ...form, tier_7d: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Từ 15 ngày (VNĐ/ngày)
-                    </label>
-                    <input
-                      type="number"
-                      value={form.tier_15d}
-                      onChange={(e) => setForm({ ...form, tier_15d: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Trọn gói 30 ngày (VNĐ)
-                    </label>
-                    <input
-                      type="number"
-                      value={form.month_30d}
-                      onChange={(e) => setForm({ ...form, month_30d: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Phụ phí trễ mỗi giờ (VNĐ)
-                    </label>
-                    <input
-                      type="number"
-                      value={form.late_fee_hourly_amount}
-                      onChange={(e) => setForm({ ...form, late_fee_hourly_amount: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Ghi chú phiên bản</label>
-                  <input
-                    type="text"
-                    value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
+        <AnimatePresence>
+          {showModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-slate-900">Tạo phiên bản bảng giá mới</h3>
                   <button
-                    type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    {submitting ? 'Đang lưu...' : 'Kích hoạt phiên bản mới'}
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
-              </form>
+                <form onSubmit={handleCreateVersion} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Giá 1-3 ngày (VNĐ/ngày)
+                      </label>
+                      <input
+                        type="number"
+                        value={form.default_price_per_day || ''}
+                        onChange={(e) => setForm({ ...form, default_price_per_day: Number(e.target.value) })}
+                        placeholder="VD: 150000"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Từ 4 ngày (VNĐ/ngày)
+                      </label>
+                      <input
+                        type="number"
+                        value={form.tier_4d || ''}
+                        onChange={(e) => setForm({ ...form, tier_4d: Number(e.target.value) })}
+                        placeholder="VD: 130000"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Từ 7 ngày (VNĐ/ngày)
+                      </label>
+                      <input
+                        type="number"
+                        value={form.tier_7d || ''}
+                        onChange={(e) => setForm({ ...form, tier_7d: Number(e.target.value) })}
+                        placeholder="VD: 110000"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Từ 15 ngày (VNĐ/ngày)
+                      </label>
+                      <input
+                        type="number"
+                        value={form.tier_15d || ''}
+                        onChange={(e) => setForm({ ...form, tier_15d: Number(e.target.value) })}
+                        placeholder="VD: 70000"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Trọn gói 30 ngày (VNĐ)
+                      </label>
+                      <input
+                        type="number"
+                        value={form.month_30d || ''}
+                        onChange={(e) => setForm({ ...form, month_30d: Number(e.target.value) })}
+                        placeholder="VD: 2100000"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Phụ phí trễ mỗi giờ (VNĐ)
+                      </label>
+                      <input
+                        type="number"
+                        value={form.late_fee_hourly_amount || ''}
+                        onChange={(e) => setForm({ ...form, late_fee_hourly_amount: Number(e.target.value) })}
+                        placeholder="VD: 20000"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Ghi chú phiên bản</label>
+                    <input
+                      type="text"
+                      placeholder="Mô tả phiên bản giá"
+                      value={form.notes}
+                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      type="submit"
+                      disabled={submitting}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
+                    >
+                      {submitting ? 'Đang lưu...' : 'Kích hoạt phiên bản mới'}
+                    </motion.button>
+                  </div>
+                </form>
+              </motion.div>
             </div>
-          </div>
-        )}
+          )}
+        </AnimatePresence>
       </div>
     </AppShell>
   );

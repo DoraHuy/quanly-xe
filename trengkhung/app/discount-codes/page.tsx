@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import useSWR from 'swr';
+import { motion, AnimatePresence } from 'motion/react';
 import { AppShell } from '@/components/layout/app-shell';
 import { apiClient, swrFetcher } from '@/core/infrastructure/api-client';
 import { formatVND, DiscountCode } from '@/core/domain/types';
-import { Percent, Plus, Trash2, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react';
+import { Percent, Plus, Trash2, ToggleLeft, ToggleRight, Loader2, X } from 'lucide-react';
 
 export default function DiscountCodesPage() {
   const { data: codes, mutate, isLoading } = useSWR<DiscountCode[]>('/discount-codes', swrFetcher);
@@ -15,7 +16,7 @@ export default function DiscountCodesPage() {
     code: '',
     description: '',
     discount_type: 'fixed_Per_Day',
-    discount_value: 10000,
+    discount_value: '',
     min_days: 1,
     max_uses: '',
   });
@@ -26,10 +27,10 @@ export default function DiscountCodesPage() {
     try {
       await apiClient.post('/discount-codes', {
         code: form.code.trim().toUpperCase(),
-        description: form.description,
+        description: form.description.trim() || undefined,
         discount_type: form.discount_type,
         discount_value: Number(form.discount_value),
-        min_days: Number(form.min_days),
+        min_days: Number(form.min_days) || 1,
         max_uses: form.max_uses ? Number(form.max_uses) : null,
       });
       await mutate();
@@ -38,7 +39,7 @@ export default function DiscountCodesPage() {
         code: '',
         description: '',
         discount_type: 'fixed_Per_Day',
-        discount_value: 10000,
+        discount_value: '',
         min_days: 1,
         max_uses: '',
       });
@@ -83,13 +84,15 @@ export default function DiscountCodesPage() {
               Quản lý mã ưu đãi theo phần trăm, giảm cố định trên đơn hoặc giảm theo từng ngày thuê
             </p>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setShowModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-sm transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Thêm mã giảm giá
-          </button>
+          </motion.button>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -113,7 +116,7 @@ export default function DiscountCodesPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {codes?.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-50/80">
+                    <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="px-5 py-3.5 font-mono font-bold text-emerald-700">{c.code}</td>
                       <td className="px-5 py-3.5 text-slate-700">{c.description || '—'}</td>
                       <td className="px-5 py-3.5 font-semibold text-slate-900">
@@ -130,7 +133,7 @@ export default function DiscountCodesPage() {
                       <td className="px-5 py-3.5">
                         <button
                           onClick={() => handleToggle(c)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition-colors ${
                             c.is_active
                               ? 'bg-emerald-100 text-emerald-700'
                               : 'bg-slate-100 text-slate-500'
@@ -148,13 +151,14 @@ export default function DiscountCodesPage() {
                         </button>
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <button
+                        <motion.button
+                          whileTap={{ scale: 0.9 }}
                           onClick={() => handleDelete(c.id)}
                           className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition cursor-pointer"
                           title="Xóa mã"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </motion.button>
                       </td>
                     </tr>
                   ))}
@@ -171,100 +175,119 @@ export default function DiscountCodesPage() {
           )}
         </div>
 
-        {showModal && (
-          <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
-              <h3 className="text-lg font-bold text-slate-900">Tạo mã giảm giá mới</h3>
-              <form onSubmit={handleCreate} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Mã Code</label>
-                  <input
-                    type="text"
-                    placeholder="VD: GIAMGIA20K"
-                    value={form.code}
-                    onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm uppercase font-mono"
-                    required
-                  />
+        {/* Create Modal */}
+        <AnimatePresence>
+          {showModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-slate-900">Tạo mã giảm giá mới</h3>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Mô tả</label>
-                  <input
-                    type="text"
-                    placeholder="Giảm 20k/ngày cho khách thuê tuần"
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+                <form onSubmit={handleCreate} className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Loại giảm</label>
-                    <select
-                      value={form.discount_type}
-                      onChange={(e) => setForm({ ...form, discount_type: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                    >
-                      <option value="fixed_Per_Day">Giảm VNĐ/ngày</option>
-                      <option value="percentage">Phần trăm (%)</option>
-                      <option value="fixed">Giảm cố định (VNĐ)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Giá trị</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Mã Code</label>
                     <input
-                      type="number"
-                      value={form.discount_value}
-                      onChange={(e) => setForm({ ...form, discount_value: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                      type="text"
+                      placeholder="VD: GIAMGIA20K"
+                      value={form.code}
+                      onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm uppercase font-mono focus:outline-none focus:border-emerald-500"
                       required
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Số ngày tối thiểu</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Mô tả</label>
                     <input
-                      type="number"
-                      min={1}
-                      value={form.min_days}
-                      onChange={(e) => setForm({ ...form, min_days: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                      type="text"
+                      placeholder="Mô tả ưu đãi"
+                      value={form.description}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Giới hạn lượt dùng</label>
-                    <input
-                      type="number"
-                      placeholder="Bỏ trống = Không giới hạn"
-                      value={form.max_uses}
-                      onChange={(e) => setForm({ ...form, max_uses: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Loại giảm</label>
+                      <select
+                        value={form.discount_type}
+                        onChange={(e) => setForm({ ...form, discount_type: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="fixed_Per_Day">Giảm VNĐ/ngày</option>
+                        <option value="percentage">Phần trăm (%)</option>
+                        <option value="fixed">Giảm cố định (VNĐ)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Giá trị</label>
+                      <input
+                        type="number"
+                        placeholder="VD: 20000 hoặc 10"
+                        value={form.discount_value}
+                        onChange={(e) => setForm({ ...form, discount_value: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
-                  >
-                    {submitting ? 'Đang lưu...' : 'Tạo mã'}
-                  </button>
-                </div>
-              </form>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Số ngày tối thiểu</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={form.min_days}
+                        onChange={(e) => setForm({ ...form, min_days: Number(e.target.value) })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Giới hạn lượt dùng</label>
+                      <input
+                        type="number"
+                        placeholder="Để trống = Không giới hạn"
+                        value={form.max_uses}
+                        onChange={(e) => setForm({ ...form, max_uses: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      type="submit"
+                      disabled={submitting}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 cursor-pointer"
+                    >
+                      {submitting ? 'Đang lưu...' : 'Tạo mã'}
+                    </motion.button>
+                  </div>
+                </form>
+              </motion.div>
             </div>
-          </div>
-        )}
+          )}
+        </AnimatePresence>
       </div>
     </AppShell>
   );
 }
-

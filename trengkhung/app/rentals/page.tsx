@@ -37,7 +37,7 @@ export default function RentalsListPage() {
   const [payAmount, setPayAmount] = useState<number>(0);
   const [payMethod, setPayMethod] = useState('bank_transfer');
   const [payNote, setPayNote] = useState('');
-  const [extraDays, setExtraDays] = useState<number>(2);
+  const [extraDays, setExtraDays] = useState<number>(1);
   const [extendPaid, setExtendPaid] = useState<number>(0);
   const [actionLoading, setActionLoading] = useState(false);
 

@@ -70,11 +70,11 @@ export default function NewRentalPage() {
   // Rental configuration state
   const [assetSearch, setAssetSearch] = useState('');
   const [selectedAssets, setSelectedAssets] = useState<Asset[]>([]);
-  const [durationDays, setDurationDays] = useState<number>(4);
+  const [durationDays, setDurationDays] = useState<number>(1);
   const [discountCode, setDiscountCode] = useState('');
   const [customDiscount, setCustomDiscount] = useState<number>(0);
   const [surchargeAmount, setSurchargeAmount] = useState<number>(0);
-  const [deposit, setDeposit] = useState<number>(500000);
+  const [deposit, setDeposit] = useState<number>(0);
   const [prepaymentAmount, setPrepaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [notes, setNotes] = useState('');
@@ -139,38 +139,6 @@ export default function NewRentalPage() {
       applyExtractedOcrFields(data.fields, data.existing_customer);
     } catch (err) {
       setError((err as Error).message || 'Không thể đọc ảnh CCCD');
-    } finally {
-      setOcrLoading(false);
-    }
-  };
-
-  // Demo helper to test my_cccd.py extraction without needing a physical CCCD photo on PC
-  const handleSimulateMyCccdOcr = async () => {
-    setOcrLoading(true);
-    setError(null);
-    try {
-      const sampleText = [
-        'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM',
-        'Độc lập - Tự do - Hạnh phúc',
-        'CĂN CƯỚC CÔNG DÂN',
-        'Số / No.: 048202006899',
-        'Họ và tên / Full name:',
-        'ĐẶNG HOÀNG MINH KHÔI',
-        'Ngày sinh / Date of birth: 16/03/2002',
-        'Giới tính / Sex: Nam   Quốc tịch / Nationality: Việt Nam',
-        'Quê quán / Place of origin: Hải Châu, Đà Nẵng',
-        'Nơi thường trú / Place of residence: 86 Bạch Đằng, Hải Châu',
-        'Thành phố Đà Nẵng',
-        'Có giá trị đến: 16/03/2042',
-      ].join('\n');
-
-      const res = await apiClient.post('/api/document-ocr/extract', {
-        raw_text: sampleText,
-        source_option: 'upload',
-      });
-      applyExtractedOcrFields(res.data.data.fields, null);
-    } catch (err) {
-      setError((err as Error).message);
     } finally {
       setOcrLoading(false);
     }
@@ -325,51 +293,46 @@ export default function NewRentalPage() {
                       Quét & Đọc Căn Cước Công Dân Tự Động (OCR)
                     </h2>
                     <p className="text-xs text-slate-300">
-                      Tích hợp thuật toán Regex <code className="text-emerald-300">my_cccd.py</code> + QR CCCD + Tesseract Tiếng Việt
+                      Tự động trích xuất thông tin khách từ mã QR CCCD hoặc nhận diện quang học tiếng Việt
                     </p>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleSimulateMyCccdOcr}
-                  disabled={ocrLoading}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/30 text-emerald-300 text-xs font-semibold transition-colors self-start"
-                >
-                  ⚡ Test mẫu CCCD (my_cccd.py)
-                </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
                   disabled={ocrLoading}
-                  className="p-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 flex items-center gap-3.5 transition-all text-left"
+                  className="p-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 flex items-center gap-3.5 transition-all text-left cursor-pointer"
                 >
-                  <div className="h-11 w-11 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0">
+                  <div className="h-11 w-11 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
                     <Camera className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-bold text-sm">Chụp ảnh CCCD</p>
                     <p className="text-xs text-slate-300">Mở camera điện thoại / máy tính</p>
                   </div>
-                </button>
+                </motion.button>
 
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="button"
                   onClick={() => uploadInputRef.current?.click()}
                   disabled={ocrLoading}
-                  className="p-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 flex items-center gap-3.5 transition-all text-left"
+                  className="p-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 flex items-center gap-3.5 transition-all text-left cursor-pointer"
                 >
-                  <div className="h-11 w-11 rounded-xl bg-teal-500 text-slate-950 flex items-center justify-center shrink-0">
+                  <div className="h-11 w-11 rounded-xl bg-teal-500 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
                     <Upload className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-bold text-sm">Tải ảnh CCCD lên</p>
                     <p className="text-xs text-slate-300">Chọn ảnh mặt trước thẻ từ thiết bị</p>
                   </div>
-                </button>
+                </motion.button>
               </div>
 
               {/* Hidden file inputs */}

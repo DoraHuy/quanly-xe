@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import useSWR from 'swr';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   QrCode,
   Search,
@@ -182,26 +183,41 @@ export default function ReturnsPage() {
           )}
         </div>
 
-        {error && (
-          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
-            <span>{error}</span>
-          </div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium flex items-center gap-2"
+            >
+              <AlertCircle className="h-5 w-5" />
+              <span>{error}</span>
+            </motion.div>
+          )}
 
-        {successMsg && (
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            <span>{successMsg}</span>
-          </div>
-        )}
+          {successMsg && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold flex items-center gap-2"
+            >
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <span>{successMsg}</span>
+            </motion.div>
+          )}
 
-        {/* Settlement Form when rental is loaded */}
-        {scanResult && (
-          <form
-            onSubmit={handleConfirmReturn}
-            className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-6"
-          >
+          {/* Settlement Form when rental is loaded */}
+          {scanResult && (
+            <motion.form
+              initial={{ opacity: 0, y: 12, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onSubmit={handleConfirmReturn}
+              className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-6"
+            >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
               <div>
                 <span className="text-xs font-bold uppercase text-emerald-600">
@@ -353,16 +369,19 @@ export default function ReturnsPage() {
               </div>
             </div>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading || selectedItemIds.length === 0}
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer disabled:opacity-50"
             >
               <CornerDownLeft className="h-4 w-4" />
               <span>Xác nhận Nhận lại Xe & Hoàn tất Quyết toán</span>
-            </button>
-          </form>
+            </motion.button>
+          </motion.form>
         )}
+      </AnimatePresence>
       </div>
     </AppShell>
   );

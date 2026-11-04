@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import useSWR from 'swr';
+import { motion, AnimatePresence } from 'motion/react';
 import { Bike, BatteryCharging, Plus, Search, QrCode, Wrench, CheckCircle2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { apiClient, swrFetcher } from '@/core/infrastructure/api-client';
@@ -82,79 +83,87 @@ export default function AssetsPage() {
           </button>
         </div>
 
-        {showAdd && (
-          <form
-            onSubmit={handleAddAsset}
-            className="bg-white rounded-2xl border border-emerald-200 p-5 shadow-sm grid grid-cols-1 sm:grid-cols-4 gap-4"
-          >
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Tên xe / Mã hiệu *
-              </label>
-              <input
-                type="text"
-                required
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="VD: R26 (Xanh)"
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Phân loại tài sản
-              </label>
-              <select
-                value={newType}
-                onChange={(e) => setNewType(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm bg-white"
-              >
-                <option value="electric_moto">Xe máy điện</option>
-                <option value="battery">Pin rời</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Mã QR (Để trống sẽ tự sinh)
-              </label>
-              <input
-                type="text"
-                value={newQr}
-                onChange={(e) => setNewQr(e.target.value)}
-                placeholder="VD: XE-889900"
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Biển số xe
-              </label>
-              <input
-                type="text"
-                value={newPlate}
-                onChange={(e) => setNewPlate(e.target.value)}
-                placeholder="VD: 43MĐ1-12345"
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm"
-              />
-            </div>
-            <div className="sm:col-span-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAdd(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold"
-              >
-                Lưu tài sản
-              </button>
-            </div>
-          </form>
-        )}
+        <AnimatePresence>
+          {showAdd && (
+            <motion.form
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25 }}
+              onSubmit={handleAddAsset}
+              className="bg-white rounded-2xl border border-emerald-200 p-5 shadow-sm grid grid-cols-1 sm:grid-cols-4 gap-4 overflow-hidden"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Tên xe / Mã hiệu *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="VD: R26 (Xanh)"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Phân loại tài sản
+                </label>
+                <select
+                  value={newType}
+                  onChange={(e) => setNewType(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="electric_moto">Xe máy điện</option>
+                  <option value="battery">Pin rời</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Mã QR (Để trống sẽ tự sinh)
+                </label>
+                <input
+                  type="text"
+                  value={newQr}
+                  onChange={(e) => setNewQr(e.target.value)}
+                  placeholder="VD: XE-889900"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Biển số xe
+                </label>
+                <input
+                  type="text"
+                  value={newPlate}
+                  onChange={(e) => setNewPlate(e.target.value)}
+                  placeholder="VD: 43MĐ1-12345"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div className="sm:col-span-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAdd(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold cursor-pointer"
+                >
+                  Lưu tài sản
+                </motion.button>
+              </div>
+            </motion.form>
+          )}
+        </AnimatePresence>
 
         {/* Filter Bar */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
