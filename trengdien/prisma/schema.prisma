@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +5,343 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  phone        String?
+  role         String   @default("staff") // admin | manager | staff
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  createdRentals  Rental[]         @relation("RentalCreator")
+  createdPricing  PricingVersion[] @relation("PricingCreator")
+  performedSwaps  AssetSwap[]      @relation("SwapPerformer")
+  returnSessions  ReturnSession[]  @relation("ReturnProcessor")
+
+  @@index([role, active])
+  @@map("users")
+}
+
+model Asset {
+  id           String   @id @default(cuid())
+  name         String
+  qrCode       String   @unique @map("qr_code")
+  type         String   @default("electric_moto") // electric_moto | battery | accessory
+  status       String   @default("available") // available | rented | maintenance
+  licensePlate String?  @map("license_plate")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  rentalItems  RentalItem[]  @relation("ItemAsset")
+  swappedItems RentalItem[]  @relation("ItemSwappedTo")
+  bookingItems BookingItem[]
+  swapsFrom    AssetSwap[]   @relation("SwapOldAsset")
+  swapsTo      AssetSwap[]   @relation("SwapNewAsset")
+
+  @@index([status, type])
+  @@index([name])
+  @@map("assets")
+}
+
+model Customer {
+  id               String    @id @default(cuid())
+  name             String
+  birthDate        DateTime? @map("birth_date")
+  idType           String    @default("cccd") @map("id_type") // cccd | passport | gplx
+  idNumber         String?   @map("id_number")
+  gender           String?
+  nationality      String?   @default("Việt Nam")
+  placeOfOrigin    String?   @map("place_of_origin")
+  residenceAddress String?   @map("residence_address")
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  contactChannels CustomerContact[]
+  rentals         Rental[]
+  bookings        Booking[]
+
+  @@index([idNumber])
+  @@index([name])
+  @@map("customers")
+}
+
+model CustomerContact {
+  id           String   @id @default(cuid())
+  customerId   String   @map("customer_id")
+  channelType  String   @default("phone") @map("channel_type") // phone | zalo | facebook | telegram | email | other
+  contactValue String   @map("contact_value")
+  isPrimary    Boolean  @default(false) @map("is_primary")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([contactValue])
+  @@map("customer_contacts")
+}
+
+model PricingVersion {
+  id                    String   @id @default(cuid())
+  versionNumber         Int      @unique @map("version_number")
+  defaultPricePerDay    Int      @default(150000) @map("default_price_per_day")
+  monthDays             Int      @default(30) @map("month_days")
+  pricePerMonth         Int      @default(2100000) @map("price_per_month")
+  pricePerExtraDay      Int      @default(70000) @map("price_per_extra_day")
+  lateFeeGraceHours     Int      @default(1) @map("late_fee_grace_hours")
+  lateFeeHourlyAmount   Int      @default(20000) @map("late_fee_hourly_amount")
+  lateFeeHourlyMaxHours Int      @default(8) @map("late_fee_hourly_max_hours")
+  note                  String?
+  isActive              Boolean  @default(false) @map("is_active")
+  creatorId             String?  @map("creator_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  creator User?         @relation("PricingCreator", fields: [creatorId], references: [id])
+  tiers   PricingTier[]
+  rentals Rental[]
+
+  @@index([isActive])
+  @@map("pricing_versions")
+}
+
+model PricingTier {
+  id               String @id @default(cuid())
+  pricingVersionId String @map("pricing_version_id")
+  minDays          Int    @map("min_days")
+  pricePerDay      Int    @map("price_per_day")
+
+  pricingVersion PricingVersion @relation(fields: [pricingVersionId], references: [id], onDelete: Cascade)
+
+  @@index([pricingVersionId])
+  @@map("pricing_tiers")
+}
+
+model DiscountCode {
+  id                 String    @id @default(cuid())
+  code               String    @unique
+  codeNormalized     String    @unique @map("code_normalized")
+  name               String
+  description        String?
+  scope              String    @default("order") // order | asset_daily
+  valueType          String    @default("fixed") @map("value_type") // fixed | percent
+  percentBasisPoints Int?      @map("percent_basis_points")
+  fixedAmount        Int?      @map("fixed_amount")
+  startDate          DateTime? @map("start_date")
+  endDate            DateTime? @map("end_date")
+  active             Boolean   @default(true)
+  deleted            Boolean   @default(false)
+  usageCount         Int       @default(0) @map("usage_count")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  rentals Rental[]
+
+  @@index([active, deleted])
+  @@map("discount_codes")
+}
+
+model Booking {
+  id               String   @id @default(cuid())
+  code             String   @unique
+  status           String   @default("pending") // pending | confirmed | converted | cancelled
+  customerId       String?  @map("customer_id")
+  customerName     String   @map("customer_name")
+  customerPhone    String   @map("customer_phone")
+  pickupAt         DateTime @map("pickup_at")
+  expectedReturnAt DateTime @map("expected_return_at")
+  durationDays     Int      @default(1) @map("duration_days")
+  deliveryRequired Boolean  @default(false) @map("delivery_required")
+  deliveryAddress  String?  @map("delivery_address")
+  depositAmount    Int      @default(0) @map("deposit_amount")
+  notes            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  customer Customer?     @relation(fields: [customerId], references: [id])
+  items    BookingItem[]
+  rentals  Rental[]
+
+  @@index([status, pickupAt])
+  @@map("bookings")
+}
+
+model BookingItem {
+  id        String @id @default(cuid())
+  bookingId String @map("booking_id")
+  assetId   String @map("asset_id")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  asset   Asset   @relation(fields: [assetId], references: [id])
+
+  @@index([bookingId])
+  @@index([assetId])
+  @@map("booking_items")
+}
+
+model Rental {
+  id                   String    @id @default(cuid())
+  code                 String    @unique
+  status               String    @default("active") // draft | active | returned | cancelled
+  customerId           String    @map("customer_id")
+  creatorId            String?   @map("creator_id")
+  pricingVersionId     String?   @map("pricing_version_id")
+  pricingVersionNumber Int       @default(1) @map("pricing_version_number")
+  sourceBookingId      String?   @map("source_booking_id")
+  discountCodeId       String?   @map("discount_code_id")
+
+  durationDays         Int       @default(1) @map("duration_days")
+  startAt              DateTime  @default(now()) @map("start_at")
+  expectedReturnAt     DateTime  @map("expected_return_at")
+  actualReturnAt       DateTime? @map("actual_return_at")
+
+  originalTotalAmount  Int       @default(0) @map("original_total_amount")
+  discountAmount       Int       @default(0) @map("discount_amount")
+  surchargeAmount      Int       @default(0) @map("surcharge_amount")
+  totalAmount          Int       @default(0) @map("total_amount")
+  deposit              Int       @default(0)
+  lateFee              Int       @default(0) @map("late_fee")
+  paidAmount           Int       @default(0) @map("paid_amount")
+  remainingBalance     Int       @default(0) @map("remaining_balance")
+  heldDepositAmount    Int       @default(0) @map("held_deposit_amount")
+
+  customerSnapshot     Json?     @map("customer_snapshot")
+  notes                String?
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  customer       Customer          @relation(fields: [customerId], references: [id])
+  creator        User?             @relation("RentalCreator", fields: [creatorId], references: [id])
+  pricingVersion PricingVersion?   @relation(fields: [pricingVersionId], references: [id])
+  sourceBooking  Booking?          @relation(fields: [sourceBookingId], references: [id])
+  discountCode   DiscountCode?     @relation(fields: [discountCodeId], references: [id])
+  items          RentalItem[]
+  payments       Payment[]
+  extensions     RentalExtension[]
+  swaps          AssetSwap[]
+  returnSessions ReturnSession[]
+  documentImages DocumentImage[]
+
+  @@index([status, expectedReturnAt])
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([startAt])
+  @@map("rentals")
+}
+
+model RentalItem {
+  id               String    @id @default(cuid())
+  rentalId         String    @map("rental_id")
+  assetId          String    @map("asset_id")
+  status           String    @default("active") // active | returned | swapped
+  startAt          DateTime  @default(now()) @map("start_at")
+  expectedReturnAt DateTime  @map("expected_return_at")
+  actualReturnAt   DateTime? @map("actual_return_at")
+  durationDays     Int       @default(1) @map("duration_days")
+  baseAmount       Int       @default(0) @map("base_amount")
+  lateFeeAmount    Int       @default(0) @map("late_fee_amount")
+  swappedToId      String?   @map("swapped_to_id")
+  swappedAt        DateTime? @map("swapped_at")
+
+  rental    Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  asset     Asset  @relation("ItemAsset", fields: [assetId], references: [id])
+  swappedTo Asset? @relation("ItemSwappedTo", fields: [swappedToId], references: [id])
+
+  @@index([rentalId])
+  @@index([assetId, status])
+  @@map("rental_items")
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  rentalId  String   @map("rental_id")
+  amount    Int
+  type      String   @default("prepayment") // prepayment | settlement | extension | deposit_collect | deposit_refund
+  method    String   @default("cash") // cash | bank_transfer
+  note      String?
+  paidAt    DateTime @default(now()) @map("paid_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  rental Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+
+  @@index([rentalId])
+  @@index([paidAt])
+  @@map("payments")
+}
+
+model RentalExtension {
+  id                  String   @id @default(cuid())
+  rentalId            String   @map("rental_id")
+  extraDays           Int      @map("extra_days")
+  extensionFee        Int      @map("extension_fee")
+  previousReturnAt    DateTime @map("previous_return_at")
+  newExpectedReturnAt DateTime @map("new_expected_return_at")
+  note                String?
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  rental Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+
+  @@index([rentalId])
+  @@map("rental_extensions")
+}
+
+model AssetSwap {
+  id          String   @id @default(cuid())
+  rentalId    String   @map("rental_id")
+  oldAssetId  String   @map("old_asset_id")
+  newAssetId  String   @map("new_asset_id")
+  performedBy String?  @map("performed_by")
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  rental    Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  oldAsset  Asset  @relation("SwapOldAsset", fields: [oldAssetId], references: [id])
+  newAsset  Asset  @relation("SwapNewAsset", fields: [newAssetId], references: [id])
+  performer User?  @relation("SwapPerformer", fields: [performedBy], references: [id])
+
+  @@index([rentalId])
+  @@map("asset_swaps")
+}
+
+model ReturnSession {
+  id               String   @id @default(cuid())
+  rentalId         String   @map("rental_id")
+  processedBy      String?  @map("processed_by")
+  returnedItemIds  Json     @map("returned_item_ids")
+  lateHours        Int      @default(0) @map("late_hours")
+  lateFeeCharged   Int      @default(0) @map("late_fee_charged")
+  collectedAmount  Int      @default(0) @map("collected_amount")
+  depositRefunded  Int      @default(0) @map("deposit_refunded")
+  notes            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  rental    Rental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  processor User?  @relation("ReturnProcessor", fields: [processedBy], references: [id])
+
+  @@index([rentalId])
+  @@map("return_sessions")
+}
+
+model DocumentImage {
+  id            String   @id @default(cuid())
+  rentalId      String?  @map("rental_id")
+  storageKey    String   @map("storage_key")
+  bucket        String   @default("ruby-document-images")
+  publicUrl     String?  @map("public_url")
+  mimeType      String   @default("image/jpeg") @map("mime_type")
+  sizeBytes     Int      @default(0) @map("size_bytes")
+  sourceOption  String   @default("upload") @map("source_option") // camera | upload
+  extractedData Json?    @map("extracted_data")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  rental Rental? @relation(fields: [rentalId], references: [id], onDelete: SetNull)
+
+  @@index([rentalId])
+  @@map("document_images")
 }
