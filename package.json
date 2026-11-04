@@ -9,7 +9,8 @@
       "@prisma/engines",
       "prisma",
       "esbuild",
-      "sharp"
+      "sharp",
+      "tesseract.js"
     ]
   }
 }
