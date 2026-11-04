@@ -105,7 +105,7 @@ export default function NewRentalPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | undefined>>({});
   const [showContractModal, setShowContractModal] = useState(false);
 
   const clearFieldError = (field: string) => {
@@ -274,12 +274,12 @@ export default function NewRentalPage() {
           residence_address: residenceAddress,
           contact_channels: contactValue.trim()
             ? [
-                {
-                  channel_type: contactChannel,
-                  contact_value: contactValue.trim(),
-                  is_primary: true,
-                },
-              ]
+              {
+                channel_type: contactChannel,
+                contact_value: contactValue.trim(),
+                is_primary: true,
+              },
+            ]
             : [],
         },
         asset_ids: selectedAssets.map((a) => a.id),
@@ -523,11 +523,10 @@ export default function NewRentalPage() {
                       clearFieldError('customerName');
                     }}
                     placeholder="VD: TRẦN TRUNG KIÊN"
-                    className={`w-full h-11 px-3.5 rounded-xl border text-sm font-semibold transition-colors focus:outline-none ${
-                      fieldErrors.customerName
-                        ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
-                        : 'border-slate-200 focus:border-emerald-500'
-                    }`}
+                    className={`w-full h-11 px-3.5 rounded-xl border text-sm font-semibold transition-colors focus:outline-none ${fieldErrors.customerName
+                      ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
+                      : 'border-slate-200 focus:border-emerald-500'
+                      }`}
                   />
                   {fieldErrors.customerName && (
                     <p className="text-xs text-rose-500 font-medium mt-1 flex items-center gap-1">
@@ -564,11 +563,10 @@ export default function NewRentalPage() {
                       clearFieldError('idNumber');
                     }}
                     placeholder="VD: 036200008935"
-                    className={`w-full h-11 px-3.5 rounded-xl border text-sm font-mono transition-colors focus:outline-none ${
-                      fieldErrors.idNumber
-                        ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
-                        : 'border-slate-200 focus:border-emerald-500'
-                    }`}
+                    className={`w-full h-11 px-3.5 rounded-xl border text-sm font-mono transition-colors focus:outline-none ${fieldErrors.idNumber
+                      ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
+                      : 'border-slate-200 focus:border-emerald-500'
+                      }`}
                   />
                   {fieldErrors.idNumber && (
                     <p className="text-xs text-rose-500 font-medium mt-1 flex items-center gap-1">
@@ -645,11 +643,10 @@ export default function NewRentalPage() {
                       clearFieldError('contactValue');
                     }}
                     placeholder="VD: 0905123456 hoặc Zalo"
-                    className={`w-full h-11 px-3.5 rounded-xl border text-sm transition-colors focus:outline-none ${
-                      fieldErrors.contactValue
-                        ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
-                        : 'border-slate-200 focus:border-emerald-500'
-                    }`}
+                    className={`w-full h-11 px-3.5 rounded-xl border text-sm transition-colors focus:outline-none ${fieldErrors.contactValue
+                      ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
+                      : 'border-slate-200 focus:border-emerald-500'
+                      }`}
                   />
                   {fieldErrors.contactValue && (
                     <p className="text-xs text-rose-500 font-medium mt-1 flex items-center gap-1">
@@ -713,11 +710,10 @@ export default function NewRentalPage() {
                       type="button"
                       key={asset.id}
                       onClick={() => toggleAsset(asset)}
-                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/20'
-                          : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100'
-                      }`}
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${isSelected
+                        ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/20'
+                        : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
@@ -766,11 +762,10 @@ export default function NewRentalPage() {
                         setDurationDays(d);
                         clearFieldError('durationDays');
                       }}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        durationDays === d
-                          ? 'bg-slate-900 text-white border-slate-900'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
+                      className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${durationDays === d
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
                     >
                       {d === 30 ? '1 Tháng' : `${d} ngày`}
                     </button>
@@ -785,11 +780,10 @@ export default function NewRentalPage() {
                     setDurationDays(Math.max(1, Number(e.target.value) || 1));
                     clearFieldError('durationDays');
                   }}
-                  className={`w-full h-10 px-3.5 rounded-xl border text-sm font-semibold transition-colors focus:outline-none ${
-                    fieldErrors.durationDays
-                      ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
-                      : 'border-slate-200 focus:border-emerald-500'
-                  }`}
+                  className={`w-full h-10 px-3.5 rounded-xl border text-sm font-semibold transition-colors focus:outline-none ${fieldErrors.durationDays
+                    ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
+                    : 'border-slate-200 focus:border-emerald-500'
+                    }`}
                 />
                 {fieldErrors.durationDays && (
                   <p className="text-xs text-rose-500 font-medium mt-1 flex items-center gap-1">
