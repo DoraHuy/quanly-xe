@@ -332,7 +332,7 @@ export class RentalApplicationService {
     const expectedReturnAt = new Date(startAt.getTime() + durationDays * 24 * 60 * 60 * 1000);
     const pricing = await this.getActivePricingConfig();
 
-    return this.prisma.$transaction(async (tx) => {
+    const rentalId = await this.prisma.$transaction(async (tx) => {
       // 1. Validate assets are available
       const assets = await tx.asset.findMany({
         where: { id: { in: payload.asset_ids } },
@@ -586,8 +586,10 @@ export class RentalApplicationService {
           .catch(() => null);
       }
 
-      return this.getRentalDetail(rental.id);
+      return rental.id;
     });
+
+    return this.getRentalDetail(rentalId);
   }
 
   async addPayment(
@@ -599,7 +601,7 @@ export class RentalApplicationService {
       throw new BadRequestException('Số tiền thanh toán phải lớn hơn 0');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       const rental = await tx.rental.findUnique({ where: { id: rentalId } });
       if (!rental) throw new NotFoundException('Không tìm thấy đơn thuê');
 
@@ -641,9 +643,9 @@ export class RentalApplicationService {
           heldDepositAmount: settlement.heldDepositAmount,
         },
       });
-
-      return this.getRentalDetail(rentalId);
     });
+
+    return this.getRentalDetail(rentalId);
   }
 
   async extendRental(
@@ -653,7 +655,7 @@ export class RentalApplicationService {
     const extraDays = Math.max(1, Math.floor(Number(dto.extra_days) || 1));
     const pricing = await this.getActivePricingConfig();
 
-    return this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       const rental = await tx.rental.findUnique({
         where: { id: rentalId },
         include: { items: { include: { asset: true } } },
@@ -732,9 +734,9 @@ export class RentalApplicationService {
           remainingBalance: settlement.remainingBalance,
         },
       });
-
-      return this.getRentalDetail(rentalId);
     });
+
+    return this.getRentalDetail(rentalId);
   }
 }
 

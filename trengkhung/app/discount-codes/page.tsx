@@ -197,7 +197,9 @@ export default function DiscountCodesPage() {
                 </div>
                 <form onSubmit={handleCreate} className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Mã Code</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Mã Code <span className="text-rose-500 font-bold">*</span>
+                    </label>
                     <input
                       type="text"
                       placeholder="VD: GIAMGIA20K"
@@ -231,7 +233,9 @@ export default function DiscountCodesPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Giá trị</label>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Giá trị ưu đãi <span className="text-rose-500 font-bold">*</span>
+                      </label>
                       <input
                         type="number"
                         placeholder="VD: 20000 hoặc 10"

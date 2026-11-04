@@ -66,8 +66,8 @@ export default function NewBookingPage() {
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Tên khách hàng *
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Tên khách hàng <span className="text-rose-500 font-bold">*</span>
               </label>
               <input
                 type="text"
@@ -79,8 +79,8 @@ export default function NewBookingPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Số điện thoại / Zalo *
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Số điện thoại / Zalo <span className="text-rose-500 font-bold">*</span>
               </label>
               <input
                 type="text"

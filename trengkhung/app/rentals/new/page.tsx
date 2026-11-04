@@ -81,7 +81,17 @@ export default function NewRentalPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showContractModal, setShowContractModal] = useState(false);
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   const applyExtractedOcrFields = (
     fields: ExtractedCccdFields,
@@ -96,6 +106,10 @@ export default function NewRentalPage() {
     if (fields.nationality) setNationality(fields.nationality);
     if (fields.place_of_origin) setPlaceOfOrigin(fields.place_of_origin);
     if (fields.residence_address) setResidenceAddress(fields.residence_address);
+
+    if (fields.name) clearFieldError('customerName');
+    if (fields.id_number) clearFieldError('idNumber');
+    if (existingCust?.phone) clearFieldError('contactValue');
 
     if (existingCust) {
       setCustomerId(existingCust.id);
@@ -145,6 +159,7 @@ export default function NewRentalPage() {
   };
 
   const toggleAsset = (asset: Asset) => {
+    clearFieldError('selectedAssets');
     if (selectedAssets.some((a) => a.id === asset.id)) {
       setSelectedAssets(selectedAssets.filter((a) => a.id !== asset.id));
     } else {
@@ -197,12 +212,26 @@ export default function NewRentalPage() {
     e.preventDefault();
     setError(null);
 
+    const errs: Record<string, string> = {};
     if (!customerName.trim()) {
-      setError('Vui lòng nhập họ tên khách hàng hoặc quét ảnh CCCD');
-      return;
+      errs.customerName = 'Vui lòng nhập họ và tên khách hàng';
+    }
+    if (!idNumber.trim()) {
+      errs.idNumber = 'Vui lòng nhập số CCCD hoặc quét ảnh thẻ';
+    }
+    if (!contactValue.trim()) {
+      errs.contactValue = 'Vui lòng nhập số điện thoại hoặc Zalo liên hệ';
     }
     if (selectedAssets.length === 0) {
-      setError('Vui lòng chọn ít nhất 1 xe hoặc pin cho đơn thuê');
+      errs.selectedAssets = 'Vui lòng chọn ít nhất 1 xe hoặc pin cho đơn thuê';
+    }
+    if (!durationDays || durationDays < 1) {
+      errs.durationDays = 'Số ngày thuê phải từ 1 ngày trở lên';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      setError('Vui lòng kiểm tra và điền đầy đủ các thông tin bắt buộc có dấu (*) đỏ');
       return;
     }
 
@@ -460,17 +489,29 @@ export default function NewRentalPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Họ và tên khách hàng <span className="text-rose-500">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Họ và tên khách hàng <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="text"
-                    required
                     value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
+                    onChange={(e) => {
+                      setCustomerName(e.target.value);
+                      clearFieldError('customerName');
+                    }}
                     placeholder="VD: TRẦN TRUNG KIÊN"
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:border-emerald-500"
+                    className={`w-full h-11 px-3.5 rounded-xl border text-sm font-semibold transition-colors focus:outline-none ${
+                      fieldErrors.customerName
+                        ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
+                        : 'border-slate-200 focus:border-emerald-500'
+                    }`}
                   />
+                  {fieldErrors.customerName && (
+                    <p className="text-xs text-rose-500 font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {fieldErrors.customerName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -489,16 +530,29 @@ export default function NewRentalPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Số CCCD / Hộ chiếu (12 số)
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Số CCCD / Hộ chiếu (12 số) <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="text"
                     value={idNumber}
-                    onChange={(e) => setIdNumber(e.target.value)}
+                    onChange={(e) => {
+                      setIdNumber(e.target.value);
+                      clearFieldError('idNumber');
+                    }}
                     placeholder="VD: 036200008935"
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-emerald-500"
+                    className={`w-full h-11 px-3.5 rounded-xl border text-sm font-mono transition-colors focus:outline-none ${
+                      fieldErrors.idNumber
+                        ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
+                        : 'border-slate-200 focus:border-emerald-500'
+                    }`}
                   />
+                  {fieldErrors.idNumber && (
+                    <p className="text-xs text-rose-500 font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {fieldErrors.idNumber}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -557,16 +611,29 @@ export default function NewRentalPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Số điện thoại / Link liên hệ
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Số điện thoại / Link liên hệ <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="text"
                     value={contactValue}
-                    onChange={(e) => setContactValue(e.target.value)}
+                    onChange={(e) => {
+                      setContactValue(e.target.value);
+                      clearFieldError('contactValue');
+                    }}
                     placeholder="VD: 0905123456 hoặc Zalo"
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-sm"
+                    className={`w-full h-11 px-3.5 rounded-xl border text-sm transition-colors focus:outline-none ${
+                      fieldErrors.contactValue
+                        ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
+                        : 'border-slate-200 focus:border-emerald-500'
+                    }`}
                   />
+                  {fieldErrors.contactValue && (
+                    <p className="text-xs text-rose-500 font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {fieldErrors.contactValue}
+                    </p>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2">
@@ -590,11 +657,17 @@ export default function NewRentalPage() {
                 <div>
                   <h2 className="font-bold text-base text-slate-900 flex items-center gap-2">
                     <Bike className="h-4 w-4 text-emerald-600" />
-                    Chọn Tài sản Thuê ({selectedAssets.length} đã chọn)
+                    Chọn Tài sản Thuê <span className="text-rose-500 font-bold">*</span> ({selectedAssets.length} đã chọn)
                   </h2>
                   <p className="text-xs text-slate-500">
                     Bấm chọn xe máy điện hoặc pin đang sẵn sàng ({availableAssets.length} tài sản trống)
                   </p>
+                  {fieldErrors.selectedAssets && (
+                    <p className="text-xs text-rose-500 font-medium mt-1 flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {fieldErrors.selectedAssets}
+                    </p>
+                  )}
                 </div>
                 <div className="relative w-full sm:w-64">
                   <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -658,16 +731,19 @@ export default function NewRentalPage() {
 
               {/* Duration Days Quick Selector */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-2">
-                  Số ngày thuê ({durationDays} ngày — đơn giá {formatVND(pricePerMoto.ratePerDay)}/xe/ngày)
+                <label className="block text-xs font-semibold text-slate-700 mb-2">
+                  Số ngày thuê <span className="text-rose-500 font-bold">*</span> ({durationDays} ngày — đơn giá {formatVND(pricePerMoto.ratePerDay)}/xe/ngày)
                 </label>
                 <div className="grid grid-cols-5 gap-2 mb-2">
                   {[1, 4, 7, 15, 30].map((d) => (
                     <button
                       type="button"
                       key={d}
-                      onClick={() => setDurationDays(d)}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                      onClick={() => {
+                        setDurationDays(d);
+                        clearFieldError('durationDays');
+                      }}
+                      className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                         durationDays === d
                           ? 'bg-slate-900 text-white border-slate-900'
                           : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -682,9 +758,22 @@ export default function NewRentalPage() {
                   min={1}
                   max={365}
                   value={durationDays}
-                  onChange={(e) => setDurationDays(Math.max(1, Number(e.target.value) || 1))}
-                  className="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-sm font-semibold"
+                  onChange={(e) => {
+                    setDurationDays(Math.max(1, Number(e.target.value) || 1));
+                    clearFieldError('durationDays');
+                  }}
+                  className={`w-full h-10 px-3.5 rounded-xl border text-sm font-semibold transition-colors focus:outline-none ${
+                    fieldErrors.durationDays
+                      ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500'
+                      : 'border-slate-200 focus:border-emerald-500'
+                  }`}
                 />
+                {fieldErrors.durationDays && (
+                  <p className="text-xs text-rose-500 font-medium mt-1 flex items-center gap-1">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {fieldErrors.durationDays}
+                  </p>
+                )}
               </div>
 
               {/* Discount Code & Custom Adjustments */}
@@ -770,8 +859,8 @@ export default function NewRentalPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Phương thức thanh toán
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Phương thức thanh toán <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <select
                     value={paymentMethod}

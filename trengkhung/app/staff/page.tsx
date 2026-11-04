@@ -152,7 +152,9 @@ export default function StaffPage() {
                 </div>
                 <form onSubmit={handleCreate} className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Tên đăng nhập</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Tên đăng nhập <span className="text-rose-500 font-bold">*</span>
+                    </label>
                     <input
                       type="text"
                       required
@@ -163,7 +165,9 @@ export default function StaffPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Họ và tên</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Họ và tên <span className="text-rose-500 font-bold">*</span>
+                    </label>
                     <input
                       type="text"
                       required
@@ -195,7 +199,9 @@ export default function StaffPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Mật khẩu khởi tạo</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Mật khẩu khởi tạo <span className="text-rose-500 font-bold">*</span>
+                    </label>
                     <input
                       type="password"
                       required
