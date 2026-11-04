@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -14,6 +15,7 @@ import { SwapApplicationService } from './application/services/swap.application-
 import { OperationsApplicationService } from './application/services/operations.application-service.js';
 import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard.js';
 import { ApiController } from './presentation/controllers/api.controller.js';
+import { AllExceptionsFilter } from './presentation/filters/http-exception.filter.js';
 
 @Module({
   imports: [
@@ -36,6 +38,10 @@ import { ApiController } from './presentation/controllers/api.controller.js';
     SwapApplicationService,
     OperationsApplicationService,
     JwtAuthGuard,
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
   ],
 })
 export class AppModule {}

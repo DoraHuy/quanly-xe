@@ -33,9 +33,16 @@ export default function LoginPage() {
       setAuth(user, token);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(
-        err?.response?.data?.message || (err as Error).message || 'Đăng nhập không thành công',
-      );
+      const raw = err?.response?.data?.message || err?.message || 'Đăng nhập không thành công';
+      let cleanMsg = 'Đăng nhập không thành công';
+      if (typeof raw === 'string') {
+        cleanMsg = raw;
+      } else if (Array.isArray(raw)) {
+        cleanMsg = raw.join(', ');
+      } else if (typeof raw === 'object' && raw !== null) {
+        cleanMsg = raw.message || raw.error || JSON.stringify(raw);
+      }
+      setError(cleanMsg);
     } finally {
       setLoading(false);
     }

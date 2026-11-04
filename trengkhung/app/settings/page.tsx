@@ -48,7 +48,7 @@ export default function SettingsPage() {
       setNewPassword('');
       setPwdMsg('Đổi mật khẩu thành công!');
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Mật khẩu hiện tại không đúng');
+      alert((err as Error).message || err?.response?.data?.message || 'Mật khẩu hiện tại không đúng');
     }
   };
 

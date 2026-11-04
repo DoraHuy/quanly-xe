@@ -43,12 +43,26 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message =
-      error?.response?.data?.message ||
-      error?.response?.data?.error ||
-      error?.message ||
-      'Đã xảy ra lỗi kết nối máy chủ';
-    return Promise.reject(new Error(Array.isArray(message) ? message.join(', ') : message));
+    const rawData = error?.response?.data;
+    let message: string;
+
+    if (typeof rawData?.message === 'string') {
+      message = rawData.message;
+    } else if (Array.isArray(rawData?.message)) {
+      message = rawData.message.join(', ');
+    } else if (typeof rawData?.message === 'object' && rawData?.message !== null) {
+      message = rawData.message.message || rawData.message.error || JSON.stringify(rawData.message);
+    } else if (typeof rawData?.error === 'string') {
+      message = rawData.error;
+    } else if (typeof rawData?.error === 'object' && rawData?.error !== null) {
+      message = rawData.error.message || rawData.error.code || JSON.stringify(rawData.error);
+    } else if (typeof error?.message === 'string' && error.message.trim() !== '') {
+      message = error.message;
+    } else {
+      message = 'Đã xảy ra lỗi kết nối máy chủ';
+    }
+
+    return Promise.reject(new Error(message));
   },
 );
 
