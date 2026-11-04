@@ -31,6 +31,28 @@ import {
   type ExtractedCccdFields,
 } from '@/core/domain/types';
 
+interface DiscountOption {
+  id: string;
+  code: string;
+  name: string;
+  scope?: string;
+  value_type?: string;
+  fixed_amount?: number | null;
+  percent_basis_points?: number | null;
+  active: boolean;
+}
+
+const safeDateToInput = (val?: string | null) => {
+  if (!val) return '';
+  try {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  } catch {
+    // fallback
+  }
+  return String(val).slice(0, 10);
+};
+
 export default function NewRentalPage() {
   const router = useRouter();
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -44,7 +66,9 @@ export default function NewRentalPage() {
 
   const availableAssets: Asset[] = assetsData?.items || [];
   const existingCustomers: Customer[] = customersData?.items || [];
-  const activeDiscounts = (discountData?.items || []).filter((d: { active: boolean }) => d.active);
+  const activeDiscounts: DiscountOption[] = (discountData?.items || []).filter(
+    (d: DiscountOption) => d.active,
+  );
 
   // Customer form state
   const [customerId, setCustomerId] = useState<string | undefined>(undefined);
@@ -173,7 +197,7 @@ export default function NewRentalPage() {
   const originalTotalAmount = pricePerMoto.totalAmount * motoCount;
 
   const matchedDiscount = activeDiscounts.find(
-    (d: { code: string }) => d.code.toUpperCase() === discountCode.trim().toUpperCase(),
+    (d) => d.code.toUpperCase() === discountCode.trim().toUpperCase(),
   );
 
   let computedDiscountAmount = Math.max(0, Number(customDiscount) || 0);
@@ -415,6 +439,7 @@ export default function NewRentalPage() {
 
               {ocrPreviewUrl && (
                 <div className="mt-4 flex items-center gap-3 bg-black/30 p-2.5 rounded-xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={ocrPreviewUrl}
                     alt="CCCD Preview"
@@ -462,9 +487,7 @@ export default function NewRentalPage() {
                         setCustomerName(c.name);
                         setIdType(c.id_type || 'cccd');
                         setIdNumber(c.id_number || '');
-                        setBirthDate(
-                          c.birth_date ? new Date(c.birth_date).toISOString().slice(0, 10) : '',
-                        );
+                        setBirthDate(safeDateToInput(c.birth_date));
                         setGender(c.gender || 'Nam');
                         setNationality(c.nationality || 'Việt Nam');
                         setPlaceOfOrigin(c.place_of_origin || '');
@@ -793,7 +816,7 @@ export default function NewRentalPage() {
                       className="w-full h-10 pl-8 pr-3 rounded-xl border border-slate-200 text-xs font-bold uppercase"
                     />
                     <datalist id="discount-suggestions">
-                      {activeDiscounts.map((d: { code: string; name: string }) => (
+                      {activeDiscounts.map((d) => (
                         <option key={d.code} value={d.code}>
                           {d.name}
                         </option>

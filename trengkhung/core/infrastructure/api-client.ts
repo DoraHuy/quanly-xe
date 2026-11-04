@@ -5,20 +5,16 @@ export const getApiBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-  // 2. Server-side runtime (Next.js Server Components / Route Handlers)
+  // 2. Local development (pnpm run dev): always connect to backend port 4000
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:4000';
+  }
+  // 3. Server-side runtime in production (Next.js Server Components / Route Handlers)
   // Vercel Service Binding injects the internal URL into process.env.TRENGDIEN_URL
   if (typeof window === 'undefined') {
     return process.env.TRENGDIEN_URL || 'http://localhost:4000';
   }
-  // 3. Client-side browser:
-  // Local development fallback when frontend runs on localhost:3000 and backend on 4000
-  if (
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-    window.location.port === '3000'
-  ) {
-    return 'http://localhost:4000';
-  }
-  // 4. In Vercel Production deployment: relative URL ('') so requests to /api/*
+  // 4. In Vercel Production deployment (browser): relative URL ('') so requests to /api/*
   // are routed to service 'trengdien' via top-level vercel.json rewrite
   return '';
 };
