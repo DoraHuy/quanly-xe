@@ -1,11 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
-import sharp from 'sharp';
 import jsQR from 'jsqr';
-import { createWorker } from 'tesseract.js';
 import {
   CccdParserDomainService,
   ExtractedCccdFields,
 } from '../../domain/services/cccd-parser.domain-service.js';
+
+let sharpModule: any = null;
+async function getSharp() {
+  if (!sharpModule) {
+    try {
+      const s = await import('sharp');
+      sharpModule = s.default || s;
+    } catch (e: any) {
+      console.warn('⚠️ Sharp native module not available in this environment:', e?.message);
+      return null;
+    }
+  }
+  return sharpModule;
+}
 
 @Injectable()
 export class DocumentOcrService {
@@ -45,28 +57,35 @@ export class DocumentOcrService {
 
     // 2. Preprocess image with Sharp (auto-orient, resize for crisp OCR, grayscale & normalize)
     let processedBuffer = buffer;
-    try {
-      processedBuffer = await sharp(buffer)
-        .rotate() // auto-orient based on EXIF
-        .resize({ width: 1600, withoutEnlargement: true })
-        .grayscale()
-        .normalize()
-        .sharpen()
-        .jpeg({ quality: 92 })
-        .toBuffer();
-    } catch (e) {
-      this.logger.warn(`Sharp preprocess fallback: ${(e as Error).message}`);
+    const sharp = await getSharp();
+    if (sharp) {
+      try {
+        processedBuffer = await sharp(buffer)
+          .rotate() // auto-orient based on EXIF
+          .resize({ width: 1600, withoutEnlargement: true })
+          .grayscale()
+          .normalize()
+          .sharpen()
+          .jpeg({ quality: 92 })
+          .toBuffer();
+      } catch (e) {
+        this.logger.warn(`Sharp preprocess fallback: ${(e as Error).message}`);
+      }
     }
 
     // 3. Run Tesseract OCR with Vietnamese + English language model
     let rawText = '';
     try {
-      const worker = await createWorker(['vie', 'eng']);
-      try {
-        const ret = await worker.recognize(processedBuffer);
-        rawText = ret.data.text || '';
-      } finally {
-        await worker.terminate();
+      const tesseract = await import('tesseract.js');
+      const createWorker = tesseract.createWorker || tesseract.default?.createWorker;
+      if (createWorker) {
+        const worker = await createWorker(['vie', 'eng']);
+        try {
+          const ret = await worker.recognize(processedBuffer);
+          rawText = ret.data.text || '';
+        } finally {
+          await worker.terminate();
+        }
       }
     } catch (err) {
       this.logger.error(`Tesseract OCR error: ${(err as Error).message}`);
@@ -83,6 +102,9 @@ export class DocumentOcrService {
   }
 
   private async tryDecodeQr(buffer: Buffer): Promise<string | null> {
+    const sharp = await getSharp();
+    if (!sharp) return null;
+
     const image = sharp(buffer).rotate();
     const metadata = await image.metadata();
     const width = metadata.width || 800;

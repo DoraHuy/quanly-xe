@@ -37,12 +37,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
-    try {
-      await this.$connect();
-      console.log('✅ Prisma connected to PostgreSQL successfully');
-    } catch (err: any) {
-      console.error('⚠️ [CRITICAL] Không thể kết nối cơ sở dữ liệu qua PrismaPg:', err?.message || err);
-      // Không crash tiến trình để exception filter có thể trả về phản hồi JSON có ý nghĩa cho client
+    // Trong môi trường serverless (như Vercel), không chặn quá trình cold-start bằng kết nối đồng bộ
+    // Prisma sẽ tự động kết nối lười (lazy connect) khi có câu lệnh query đầu tiên
+    if (!process.env.VERCEL) {
+      try {
+        await this.$connect();
+        console.log('✅ Prisma connected to PostgreSQL successfully');
+      } catch (err: any) {
+        console.error('⚠️ [CRITICAL] Không thể kết nối cơ sở dữ liệu qua PrismaPg:', err?.message || err);
+      }
     }
   }
 
