@@ -1,0 +1,36 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "trengdien": {
+      "root": "trengdien",
+      "framework": "nestjs"
+    },
+    "trengkhung": {
+      "root": "trengkhung",
+      "framework": "nextjs",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "trengdien",
+          "format": "url",
+          "env": "TRENGDIEN_URL"
+        }
+      ]
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "trengdien"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "trengkhung"
+      }
+    }
+  ]
+}
+
